@@ -13,27 +13,30 @@ public class FileSender implements Runnable {
 	InetAddress address;
 	DatagramPacket packet;
 	DatagramPacket answer;
-	DatagramPacket sendFileName;
+	DatagramPacket sendFileNamePacket;
 
 	byte[] buffer = new byte[1400];
 	byte[] receiveBuffer = new byte[1];
 	byte[] fileNameBuffer;
-	
+
 	CRC32 checker = new CRC32();
 	LongToByte ltb = new LongToByte();
 	FileInputStream fileInput;
+	final String filePath;
 	final String fileName;
 	Byte b;
 	int bytesRead = 0;
 	private int bytesTransmitted = 0;
 
+	long checksum;
 	int senderPort;
 	int receiverPort;
 	int oneOrNull;
 
-	public FileSender(int senderPort, int receiverPort, String fileName){
+	public FileSender(int senderPort, int receiverPort, String filePath, String fileName){
 		this.senderPort = senderPort;
 		this.receiverPort = receiverPort;
+		this.filePath = filePath;
 		this.fileName = fileName;
 	}
 
@@ -42,27 +45,21 @@ public class FileSender implements Runnable {
 		try {
 			address = InetAddress.getByName("localhost");
 			daso = new DatagramSocket(senderPort);
-			fileInput = new FileInputStream("/Users/Izzy/Desktop/3.png");
+			fileInput = new FileInputStream(filePath);
 			int counter = 0;
+
+			daso.send(prepareFileName(fileName, counter));
+			counter ++;
 			
-			//counter = prepareFileName(fileName, counter);
 
-
-			//TODO dateiname mitschicken!
-			//buffer[9] = b.parseByte(fileName);
 			bytesRead = fileInput.read(buffer, HEADER_LENGTH, buffer.length - HEADER_LENGTH);
 			bytesTransmitted = bytesRead;
 			answer = new DatagramPacket(receiveBuffer, receiveBuffer.length);
 
 			while(bytesRead != -1) {
 
-				//TODO buffer[1] = dateiname
 				oneOrNull = counter % 2;
-				buffer[0] = (byte) oneOrNull;
-				long checksum = getChecksum(buffer);
-				buffer = LongToByte.toByteArray(checksum, buffer, 1);
-				packet = new DatagramPacket(buffer, bytesRead + HEADER_LENGTH, address, receiverPort);
-				daso.send(packet);
+				daso.send(packPacket(buffer));
 				Thread.sleep(30);
 				if(bytesRead != -1) {
 					bytesTransmitted += bytesRead;
@@ -84,14 +81,24 @@ public class FileSender implements Runnable {
 		}
 	}
 
-	public int prepareFileName(String filename, int counter) throws IOException{
-		fileNameBuffer =  new byte[filename.length() + HEADER_LENGTH];
+	public DatagramPacket prepareFileName(String filename, int counter) throws IOException{
 		oneOrNull = counter % 2;
-		fileNameBuffer[0] = (byte) oneOrNull;
-		//filename.getChars(0, filename.length(), fileNameBuffer, HEADER_LENGTH);
-		sendFileName = new DatagramPacket(fileNameBuffer, fileNameBuffer.length, address, receiverPort);
-		daso.send(sendFileName);
-		return counter++;
+		byte[] tempBuffer = filename.getBytes();
+		fileNameBuffer = new byte[tempBuffer.length + HEADER_LENGTH];
+		System.arraycopy(tempBuffer, 0, fileNameBuffer, HEADER_LENGTH, tempBuffer.length);
+//		for(int i = 0; i < tempBuffer.length; i++){
+//			fileNameBuffer[i] = tempBuffer[i + HEADER_LENGTH];
+//		}
+		//System.out.println(filename.getBytes().length);
+		return packPacket(fileNameBuffer);
+	}
+
+	public DatagramPacket packPacket(byte[] buffer){
+		buffer[0] = (byte) oneOrNull;
+		long checksum = getChecksum(buffer);
+		buffer = LongToByte.toByteArray(checksum, buffer, 1);
+		packet = new DatagramPacket(buffer, bytesRead + HEADER_LENGTH, address, receiverPort);
+		return packet;
 	}
 
 	public long getChecksum(byte[] buffer) {

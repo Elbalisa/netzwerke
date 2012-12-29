@@ -7,7 +7,7 @@ import java.util.zip.CRC32;
 
 public class FileReceiver implements Runnable {
 
-	public String fileName;
+	public String savePath;
 	public String hostName;
 	public int senderPort;
 	public int receiverPort;
@@ -22,23 +22,26 @@ public class FileReceiver implements Runnable {
 	LongToByte ltb = new LongToByte();
 	CRC32 checker = new CRC32();
 
-	public FileReceiver(String fileName, String hostName, int senderPort, int receiverPort){
+	public FileReceiver(String savePath, String hostName, int senderPort, int receiverPort){
 
-		this.fileName = fileName;
+		this.savePath = savePath;
 		this.hostName = hostName;
 		this.senderPort = senderPort;
 		this.receiverPort = receiverPort;
-		
+
 	}
 
 	public void run(){
 		int bytesReceived = 0;
 		try {
 			daso = new DatagramSocket(receiverPort);
-			fileOut = new FileOutputStream(fileName, true);
-			
+			receivePacket = new DatagramPacket(buffer, buffer.length);
+			daso.receive(receivePacket);
+			savePath += getFilename();
+			fileOut = new FileOutputStream(savePath, true);
+
 			while(true){
-				
+
 				receivePacket = new DatagramPacket(buffer, buffer.length);
 				address = InetAddress.getByName("localhost");
 				daso.receive(receivePacket);
@@ -67,18 +70,23 @@ public class FileReceiver implements Runnable {
 		}
 
 	}
-	
-	private long getChecksum(byte[] buffer){
-		for(int i = 1; i < 9; i++){
-			buffer[i] = 0;
+
+	private String getFilename() throws IOException{
+		byte[] tempBuffer = new byte[buffer.length-FileSender.HEADER_LENGTH];
+		for(int i = 0; i < tempBuffer.length; i++){
+			tempBuffer[i] = buffer[i + FileSender.HEADER_LENGTH];
 		}
+		return new String(tempBuffer);
+	}
+
+	private long getChecksum(byte[] buffer){
 		checker.reset();
 		checker.update(buffer, FileSender.HEADER_LENGTH, buffer.length - FileSender.HEADER_LENGTH);
 		long l = checker.getValue();
 		//System.out.println("receiver: " + l);
 		return l;
 	}
-	
+
 	private boolean checksumIsRight(byte[] buffer){
 		long sentChecksum = ltb.toLong(buffer, 1);
 		long thisChecksum = getChecksum(buffer);
