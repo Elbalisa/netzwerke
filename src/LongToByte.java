@@ -1,6 +1,6 @@
 public class LongToByte {
 
-	public static byte[] toByteArry(long value, byte[] array, int offset){
+	public static byte[] toByteArray(long value, byte[] array, int offset){
 	    for(int i = 0; i < 8; i++){  
 	       array[7 - i + offset] = (byte)(value >>> (i * 8));  
 	    }  

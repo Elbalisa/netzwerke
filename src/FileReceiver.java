@@ -3,12 +3,14 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.zip.CRC32;
 
 public class FileReceiver implements Runnable {
 
 	public String fileName;
 	public String hostName;
-	public int port;
+	public int senderPort;
+	public int receiverPort;
 
 	DatagramSocket daso;
 	InetAddress address;
@@ -18,36 +20,46 @@ public class FileReceiver implements Runnable {
 	byte[] ackBuffer = new byte[1];
 	FileOutputStream fileOut;
 	LongToByte ltb = new LongToByte();
+	CRC32 checker = new CRC32();
 
-	public FileReceiver(String fileName, String hostName, int port){
+	public FileReceiver(String fileName, String hostName, int senderPort, int receiverPort){
 
 		this.fileName = fileName;
 		this.hostName = hostName;
-		this.port = port;
+		this.senderPort = senderPort;
+		this.receiverPort = receiverPort;
 		
 	}
 
 	public void run(){
 		int bytesReceived = 0;
 		try {
-			daso = new DatagramSocket(port);
-			receivePacket = new DatagramPacket(buffer, buffer.length);
-			sendPacket = new DatagramPacket(ackBuffer, ackBuffer.length);
+			daso = new DatagramSocket(receiverPort);
 			fileOut = new FileOutputStream(fileName, true);
-
+			
 			while(true){
+				
+				receivePacket = new DatagramPacket(buffer, buffer.length);
+				address = InetAddress.getByName("localhost");
 				daso.receive(receivePacket);
-				long l = ltb.toLong(buffer, 1);
-				//TODO check checksum
+				while(!checksumIsRight(buffer)){
+					ackBuffer[0] = (byte) ((buffer[0] + 1) %2);
+					sendPacket = new DatagramPacket(ackBuffer, ackBuffer.length, address, senderPort);
+					daso.send(sendPacket);
+					daso.receive(receivePacket);
+				}
+
 				fileOut.write(buffer, FileSender.HEADER_LENGTH, receivePacket.getLength()-FileSender.HEADER_LENGTH);
 				System.err.println(receivePacket.getLength());
 				bytesReceived += buffer.length - FileSender.HEADER_LENGTH;
+				ackBuffer[0] = buffer[0];
+				sendPacket = new DatagramPacket(ackBuffer, ackBuffer.length, address, senderPort);
+				daso.send(sendPacket);
 				if(receivePacket.getLength() < 1390){
 					fileOut.flush();
 					fileOut.close();
 					break;
 				}
-				//daso.send(sendPacket);
 				System.out.println(bytesReceived);
 			}
 
@@ -55,5 +67,21 @@ public class FileReceiver implements Runnable {
 			e.printStackTrace();
 		}
 
+	}
+	
+	private long getChecksum(byte[] buffer){
+		for(int i = 1; i < 9; i++){
+			buffer[i] = 0;
+		}
+		checker.reset();
+		checker.update(buffer, 2, buffer.length-2);
+		long l = checker.getValue();
+		return l;
+	}
+	
+	private boolean checksumIsRight(byte[] buffer){
+		long sentChecksum = ltb.toLong(buffer, 1);
+		long thisChecksum = getChecksum(buffer);
+		return sentChecksum == thisChecksum;
 	}
 }
