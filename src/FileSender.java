@@ -50,7 +50,7 @@ public class FileSender implements Runnable {
 
 			//TODO dateiname mitschicken!
 			//buffer[9] = b.parseByte(fileName);
-			bytesRead = fileInput.read(buffer, HEADER_LENGTH, buffer.length - HEADER_LENGTH);//TODO check end condition
+			bytesRead = fileInput.read(buffer, HEADER_LENGTH, buffer.length - HEADER_LENGTH);
 			bytesTransmitted = bytesRead;
 			answer = new DatagramPacket(receiveBuffer, receiveBuffer.length);
 
@@ -96,8 +96,9 @@ public class FileSender implements Runnable {
 
 	public long getChecksum(byte[] buffer) {
 		checker.reset();
-		checker.update(buffer, 2, buffer.length-2);
+		checker.update(buffer, HEADER_LENGTH, buffer.length - HEADER_LENGTH);
 		long l = checker.getValue();
+		//System.out.println("sender: " + l);
 		return l;
 	}
 

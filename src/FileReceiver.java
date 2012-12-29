@@ -50,7 +50,7 @@ public class FileReceiver implements Runnable {
 				}
 
 				fileOut.write(buffer, FileSender.HEADER_LENGTH, receivePacket.getLength()-FileSender.HEADER_LENGTH);
-				System.err.println(receivePacket.getLength());
+				//System.err.println(receivePacket.getLength());
 				bytesReceived += buffer.length - FileSender.HEADER_LENGTH;
 				ackBuffer[0] = buffer[0];
 				sendPacket = new DatagramPacket(ackBuffer, ackBuffer.length, address, senderPort);
@@ -60,7 +60,6 @@ public class FileReceiver implements Runnable {
 					fileOut.close();
 					break;
 				}
-				System.out.println(bytesReceived);
 			}
 
 		} catch (IOException e) {
@@ -74,8 +73,9 @@ public class FileReceiver implements Runnable {
 			buffer[i] = 0;
 		}
 		checker.reset();
-		checker.update(buffer, 2, buffer.length-2);
+		checker.update(buffer, FileSender.HEADER_LENGTH, buffer.length - FileSender.HEADER_LENGTH);
 		long l = checker.getValue();
+		//System.out.println("receiver: " + l);
 		return l;
 	}
 	
