@@ -3,24 +3,21 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.util.zip.CRC32;
 
 public class FileSender implements Runnable {
 
-	public static final int HEADER_LENGTH = 9;
-
 	DatagramSocket daso;
 	InetAddress address;
-	DatagramPacket packet;
+	//DatagramPacket packet;
 	DatagramPacket answer;
-	DatagramPacket sendFileNamePacket;
+//	DatagramPacket sendFileNamePacket;
 
-	byte[] buffer = new byte[1400];
+	byte[] buffer = new byte[AlternatingBitPacket.MAX_PAYLOAD];
 	byte[] receiveBuffer = new byte[1];
 	byte[] fileNameBuffer;
 
-	CRC32 checker = new CRC32();
-	LongToByte ltb = new LongToByte();
+	//CRC32 checker = new CRC32();
+	//LongToByte ltb = new LongToByte();
 	FileInputStream fileInput;
 	final String filePath;
 	final String fileName;
@@ -28,10 +25,13 @@ public class FileSender implements Runnable {
 	int bytesRead = 0;
 	private int bytesTransmitted = 0;
 
-	long checksum;
+
+
+	//long checksum;
 	int senderPort;
 	int receiverPort;
-	int oneOrNull;
+	private AlternatingBitPacket packet;
+	//int oneOrNull;
 
 	public FileSender(int senderPort, int receiverPort, String filePath, String fileName){
 		this.senderPort = senderPort;
@@ -46,49 +46,61 @@ public class FileSender implements Runnable {
 			address = InetAddress.getByName("localhost");
 			daso = new DatagramSocket(senderPort);
 			fileInput = new FileInputStream(filePath);
-			int counter = 0;
 
+			packet = new AlternatingBitPacket(address, receiverPort);
+
+			DatagramPacket currentPacket = packet.prepareToSend(fileName.getBytes());
+
+			do{
+				daso.send(currentPacket);
+				daso.receive(answer);
+			}while(currentPacket.getData()[0] != answer.getData()[0]);
+
+			bytesRead = fileInput.read(buffer, 0, buffer.length);
+			bytesTransmitted = bytesRead;
+			while(bytesRead != -1) {
+				currentPacket = packet.prepareToSend(buffer);
+				do{
+					daso.send(currentPacket);
+					daso.receive(answer);
+				}while(currentPacket.getData()[0] != answer.getData()[0]);
+				bytesTransmitted += bytesRead;
+			}
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}
+/*		
 			daso.send(prepareFileName(fileName, counter));
 			counter ++;
-			
 
-			bytesRead = fileInput.read(buffer, HEADER_LENGTH, buffer.length - HEADER_LENGTH);
-			bytesTransmitted = bytesRead;
+
 			answer = new DatagramPacket(receiveBuffer, receiveBuffer.length);
 
-			while(bytesRead != -1) {
-
-				oneOrNull = counter % 2;
+				//oneOrNull = counter % 2;
 				daso.send(packPacket(buffer));
 				Thread.sleep(30);
 				if(bytesRead != -1) {
-					bytesTransmitted += bytesRead;
 				}
 				daso.receive(answer);
 				while(receiveBuffer[0] != (byte) oneOrNull){
 					daso.send(packet);
 					daso.receive(answer);
 				}
-				bytesRead = fileInput.read(buffer, HEADER_LENGTH, buffer.length - HEADER_LENGTH);
+				bytesRead = fileInput.read(buffer, AlternatingBitPacket.HEADER_LENGTH, buffer.length - AlternatingBitPacket.HEADER_LENGTH);
 				counter ++;
 			}
 			System.out.println(counter + " Pakete gesendet = " + bytesTransmitted);
 			daso.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
 	}
 
 	public DatagramPacket prepareFileName(String filename, int counter) throws IOException{
 		oneOrNull = counter % 2;
 		byte[] tempBuffer = filename.getBytes();
-		fileNameBuffer = new byte[tempBuffer.length + HEADER_LENGTH];
-		System.arraycopy(tempBuffer, 0, fileNameBuffer, HEADER_LENGTH, tempBuffer.length);
-//		for(int i = 0; i < tempBuffer.length; i++){
-//			fileNameBuffer[i] = tempBuffer[i + HEADER_LENGTH];
-//		}
+		fileNameBuffer = new byte[tempBuffer.length + AlternatingBitPacket.HEADER_LENGTH];
+		System.arraycopy(tempBuffer, 0, fileNameBuffer, AlternatingBitPacket.HEADER_LENGTH, tempBuffer.length);
 		//System.out.println(filename.getBytes().length);
 		return packPacket(fileNameBuffer);
 	}
@@ -97,16 +109,16 @@ public class FileSender implements Runnable {
 		buffer[0] = (byte) oneOrNull;
 		long checksum = getChecksum(buffer);
 		buffer = LongToByte.toByteArray(checksum, buffer, 1);
-		packet = new DatagramPacket(buffer, bytesRead + HEADER_LENGTH, address, receiverPort);
+		packet = new DatagramPacket(buffer, bytesRead + AlternatingBitPacket.HEADER_LENGTH, address, receiverPort);
 		return packet;
 	}
 
 	public long getChecksum(byte[] buffer) {
 		checker.reset();
-		checker.update(buffer, HEADER_LENGTH, buffer.length - HEADER_LENGTH);
+		checker.update(buffer, AlternatingBitPacket.HEADER_LENGTH, buffer.length - AlternatingBitPacket.HEADER_LENGTH);
 		long l = checker.getValue();
 		//System.out.println("sender: " + l);
 		return l;
 	}
 
-}
+}*/

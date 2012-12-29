@@ -18,9 +18,13 @@ public class FileReceiver implements Runnable {
 	DatagramPacket sendPacket;
 	byte[] buffer = new byte[1400];
 	byte[] ackBuffer = new byte[1];
+	byte[] payload;
+	//byte[] fileNameBuffer = new byte[100];
 	FileOutputStream fileOut;
 	LongToByte ltb = new LongToByte();
 	CRC32 checker = new CRC32();
+
+	AlternatingBitPacket packet;
 
 	public FileReceiver(String savePath, String hostName, int senderPort, int receiverPort){
 
@@ -33,12 +37,49 @@ public class FileReceiver implements Runnable {
 
 	public void run(){
 		int bytesReceived = 0;
+
 		try {
 			daso = new DatagramSocket(receiverPort);
+			packet = new AlternatingBitPacket();
+
+
 			receivePacket = new DatagramPacket(buffer, buffer.length);
 			daso.receive(receivePacket);
-			savePath += getFilename();
+
+			while(packet.extractChecksum(receivePacket) != packet.getChecksum(packet.getPayload(receivePacket))){
+				daso.send(packet.getNak());
+				daso.receive(receivePacket);
+			}
+
+			payload = packet.getPayload(receivePacket);
+			savePath += new String(payload);
 			fileOut = new FileOutputStream(savePath, true);
+
+
+			while(receivePacket.getLength() >= 1390){
+				receivePacket = new DatagramPacket(buffer, buffer.length);
+				do{
+					daso.receive(receivePacket);
+					daso.send(packet.getAck());
+					while(packet.extractChecksum(receivePacket) != packet.getChecksum(packet.getPayload(receivePacket))){
+						daso.send(packet.getNak());
+						daso.receive(receivePacket);
+					}
+					fileOut.write(packet.getPayload(receivePacket));
+				}while(packet.extractChecksum(receivePacket) == packet.getChecksum(packet.getPayload(receivePacket)));
+
+			}
+			fileOut.flush();
+			fileOut.close();
+			daso.close();
+
+		}catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}
+/*			
+			//savePath += getFilename();
 
 			while(true){
 
@@ -52,9 +93,9 @@ public class FileReceiver implements Runnable {
 					daso.receive(receivePacket);
 				}
 
-				fileOut.write(buffer, FileSender.HEADER_LENGTH, receivePacket.getLength()-FileSender.HEADER_LENGTH);
+				fileOut.write(buffer, AlternatingBitPacket.HEADER_LENGTH, receivePacket.getLength()- AlternatingBitPacket.HEADER_LENGTH);
 				//System.err.println(receivePacket.getLength());
-				bytesReceived += buffer.length - FileSender.HEADER_LENGTH;
+				bytesReceived += buffer.length - AlternatingBitPacket.HEADER_LENGTH;
 				ackBuffer[0] = buffer[0];
 				sendPacket = new DatagramPacket(ackBuffer, ackBuffer.length, address, senderPort);
 				daso.send(sendPacket);
@@ -65,23 +106,20 @@ public class FileReceiver implements Runnable {
 				}
 			}
 
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 
 	}
 
 	private String getFilename() throws IOException{
-		byte[] tempBuffer = new byte[buffer.length-FileSender.HEADER_LENGTH];
+		byte[] tempBuffer = new byte[buffer.length-AlternatingBitPacket.HEADER_LENGTH];
 		for(int i = 0; i < tempBuffer.length; i++){
-			tempBuffer[i] = buffer[i + FileSender.HEADER_LENGTH];
+			tempBuffer[i] = buffer[i + AlternatingBitPacket.HEADER_LENGTH];
 		}
 		return new String(tempBuffer);
 	}
 
 	private long getChecksum(byte[] buffer){
 		checker.reset();
-		checker.update(buffer, FileSender.HEADER_LENGTH, buffer.length - FileSender.HEADER_LENGTH);
+		checker.update(buffer, AlternatingBitPacket.HEADER_LENGTH, buffer.length - AlternatingBitPacket.HEADER_LENGTH);
 		long l = checker.getValue();
 		//System.out.println("receiver: " + l);
 		return l;
@@ -92,4 +130,4 @@ public class FileReceiver implements Runnable {
 		long thisChecksum = getChecksum(buffer);
 		return sentChecksum == thisChecksum;
 	}
-}
+}*/
