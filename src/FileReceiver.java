@@ -15,14 +15,14 @@ public class FileReceiver implements Runnable {
 	DatagramSocket daso;
 	InetAddress address;
 	DatagramPacket receivePacket;
-	DatagramPacket sendPacket;
+	//DatagramPacket sendPacket;
 	byte[] buffer = new byte[1400];
-	byte[] ackBuffer = new byte[1];
+	//byte[] ackBuffer = new byte[1];
 	byte[] payload;
 	//byte[] fileNameBuffer = new byte[100];
 	FileOutputStream fileOut;
 	LongToByte ltb = new LongToByte();
-	CRC32 checker = new CRC32();
+	//CRC32 checker = new CRC32();
 
 	AlternatingBitPacket packet;
 
@@ -40,18 +40,17 @@ public class FileReceiver implements Runnable {
 
 		try {
 			daso = new DatagramSocket(receiverPort);
-			packet = new AlternatingBitPacket();
+			packet = new AlternatingBitPacket(address, senderPort, receiverPort);
 
 
 			receivePacket = new DatagramPacket(buffer, buffer.length);
 			daso.receive(receivePacket);
 
-			while(packet.extractChecksum(receivePacket) != packet.getChecksum(packet.getPayload(receivePacket))){
+			while(!checksumIsRight()){
 				daso.send(packet.getNak());
 				daso.receive(receivePacket);
 			}
 
-			payload = packet.getPayload(receivePacket);
 			savePath += new String(payload);
 			fileOut = new FileOutputStream(savePath, true);
 
@@ -61,12 +60,12 @@ public class FileReceiver implements Runnable {
 				do{
 					daso.receive(receivePacket);
 					daso.send(packet.getAck());
-					while(packet.extractChecksum(receivePacket) != packet.getChecksum(packet.getPayload(receivePacket))){
+					while(!checksumIsRight()){
 						daso.send(packet.getNak());
 						daso.receive(receivePacket);
 					}
 					fileOut.write(packet.getPayload(receivePacket));
-				}while(packet.extractChecksum(receivePacket) == packet.getChecksum(packet.getPayload(receivePacket)));
+				}while(checksumIsRight());
 
 			}
 			fileOut.flush();
@@ -76,6 +75,14 @@ public class FileReceiver implements Runnable {
 		}catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		
+	}
+	private boolean checksumIsRight(){
+		long gottenChecksum = packet.extractChecksum(receivePacket);
+		payload = packet.getPayload(receivePacket);
+		long checksum = packet.getChecksum(payload);
+		return checksum == gottenChecksum;
 	}
 }
 /*			

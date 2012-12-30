@@ -13,26 +13,24 @@ public class AlternatingBitPacket {
 	public long checksum;
 	private CRC32 checksumCalculator = new CRC32();
 	private DatagramPacket packet;
-	public int port;
+	public int senderPort;
+	public int receiverPort;
 	private InetAddress address;
 	private int totalBytesInBuffer;
 	private byte[] buffer;
 	
-	public AlternatingBitPacket(InetAddress address, int port){
+	public AlternatingBitPacket(InetAddress address, int senderPort, int receiverPort){
 		this.address = address;
-		this.port = port;
+		this.senderPort = senderPort;
+		this.receiverPort = receiverPort;
 	}
 	
-	public AlternatingBitPacket() {
-		// TODO Auto-generated constructor stub
-	}
-
 	public DatagramPacket getAck() {
-		return new DatagramPacket(new byte[]{(byte) getOneOrNull()}, 1, address, port);
+		return new DatagramPacket(new byte[]{(byte) getOneOrNull()}, 1, address, senderPort);
 	}
 	
 	public DatagramPacket getNak(){
-		return new DatagramPacket(new byte[]{(byte) ((getOneOrNull() ^ 1) & 0x1)}, 1, address, port);
+		return new DatagramPacket(new byte[]{(byte) ((getOneOrNull() ^ 1) & 0x1)}, 1, address, senderPort);
 	}
 	
 	public long getChecksum(byte[] payload){
@@ -51,7 +49,7 @@ public class AlternatingBitPacket {
 		buffer[0] = (byte) getOneOrNull();
 		LongToByte.toByteArray(getChecksum(payload), buffer, 1);
 		System.arraycopy(payload, 0, buffer, HEADER_LENGTH, payload.length);
-		packet = new DatagramPacket(buffer, totalBytesInBuffer, address, port);
+		packet = new DatagramPacket(buffer, buffer.length, address, receiverPort);
 		counter ++;
 		return packet;
 	}

@@ -10,7 +10,7 @@ public class FileSender implements Runnable {
 	InetAddress address;
 	//DatagramPacket packet;
 	DatagramPacket answer;
-//	DatagramPacket sendFileNamePacket;
+	//	DatagramPacket sendFileNamePacket;
 
 	byte[] buffer = new byte[AlternatingBitPacket.MAX_PAYLOAD];
 	byte[] receiveBuffer = new byte[1];
@@ -47,7 +47,7 @@ public class FileSender implements Runnable {
 			daso = new DatagramSocket(senderPort);
 			fileInput = new FileInputStream(filePath);
 
-			packet = new AlternatingBitPacket(address, receiverPort);
+			packet = new AlternatingBitPacket(address, senderPort, receiverPort);
 
 			DatagramPacket currentPacket = packet.prepareToSend(fileName.getBytes());
 
