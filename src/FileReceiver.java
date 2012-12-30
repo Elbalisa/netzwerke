@@ -26,7 +26,7 @@ public class FileReceiver implements Runnable {
 
 	AlternatingBitPacket packet;
 
-	public FileReceiver(String savePath, String hostName, int senderPort, int receiverPort){
+	public FileReceiver(String savePath, String hostName, int senderPort, int receiverPort) {
 
 		this.savePath = savePath;
 		this.hostName = hostName;
@@ -39,6 +39,7 @@ public class FileReceiver implements Runnable {
 		int bytesReceived = 0;
 
 		try {
+			address = InetAddress.getByName(hostName);
 			daso = new DatagramSocket(receiverPort);
 			packet = new AlternatingBitPacket(address, senderPort, receiverPort);
 
@@ -46,44 +47,50 @@ public class FileReceiver implements Runnable {
 			receivePacket = new DatagramPacket(buffer, buffer.length);
 			daso.receive(receivePacket);
 
-			while(!checksumIsRight()){
+			while(!checksumIsRight()) {
+				System.err.println("NAK");
 				daso.send(packet.getNak());
 				daso.receive(receivePacket);
 			}
+			daso.send(packet.getAck());
+			System.err.println("ACK");
 
 			savePath += new String(payload);
 			fileOut = new FileOutputStream(savePath, true);
 
+			do{
 
-			while(receivePacket.getLength() >= 1390){
 				receivePacket = new DatagramPacket(buffer, buffer.length);
 				do{
 					daso.receive(receivePacket);
-					daso.send(packet.getAck());
 					while(!checksumIsRight()){
+						System.err.println("NAK");
 						daso.send(packet.getNak());
 						daso.receive(receivePacket);
 					}
+					System.err.println("ACK");
+					daso.send(packet.getAck());
 					fileOut.write(packet.getPayload(receivePacket));
 				}while(checksumIsRight());
 
-			}
-			fileOut.flush();
-			fileOut.close();
-			daso.close();
+			}while(receivePacket.getLength() >= 1390);
+		
+		fileOut.flush();
+		fileOut.close();
+		daso.close();
 
-		}catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		
+	}catch (IOException e) {
+		e.printStackTrace();
 	}
-	private boolean checksumIsRight(){
-		long gottenChecksum = packet.extractChecksum(receivePacket);
-		payload = packet.getPayload(receivePacket);
-		long checksum = packet.getChecksum(payload);
-		return checksum == gottenChecksum;
-	}
+
+
+}
+private boolean checksumIsRight(){
+	long gottenChecksum = packet.extractChecksum(receivePacket);
+	payload = packet.getPayload(receivePacket);
+	long checksum = packet.getChecksum(payload);
+	return checksum == gottenChecksum;
+}
 }
 /*			
 			//savePath += getFilename();

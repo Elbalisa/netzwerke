@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketTimeoutException;
 
 public class FileSender implements Runnable {
 
@@ -10,6 +11,7 @@ public class FileSender implements Runnable {
 	InetAddress address;
 	//DatagramPacket packet;
 	DatagramPacket answer;
+	DatagramPacket currentPacket;
 	//	DatagramPacket sendFileNamePacket;
 
 	byte[] buffer = new byte[AlternatingBitPacket.MAX_PAYLOAD];
@@ -49,10 +51,12 @@ public class FileSender implements Runnable {
 
 			packet = new AlternatingBitPacket(address, senderPort, receiverPort);
 
-			DatagramPacket currentPacket = packet.prepareToSend(fileName.getBytes());
-
+			currentPacket = packet.prepareToSend(fileName.getBytes());
+			answer = new DatagramPacket(receiveBuffer, receiveBuffer.length);
+			
 			do{
 				daso.send(currentPacket);
+				//daso.setSoTimeout(30);
 				daso.receive(answer);
 			}while(currentPacket.getData()[0] != answer.getData()[0]);
 
@@ -62,14 +66,26 @@ public class FileSender implements Runnable {
 				currentPacket = packet.prepareToSend(buffer);
 				do{
 					daso.send(currentPacket);
+					System.out.println("PACKET sent");
 					daso.receive(answer);
 				}while(currentPacket.getData()[0] != answer.getData()[0]);
 				bytesTransmitted += bytesRead;
+				bytesRead = fileInput.read(buffer, 0, buffer.length);
 			}
+			System.out.println(bytesTransmitted);
 
 		} catch (IOException e) {
+			if(e instanceof SocketTimeoutException){
+				try {
+					daso.send(currentPacket);
+					return;
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			}
 			e.printStackTrace();
 		}
+		
 	}
 }
 /*		

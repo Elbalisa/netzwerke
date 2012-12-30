@@ -2,7 +2,6 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.util.zip.CRC32;
 
-
 public class AlternatingBitPacket {
 	
 	public static final int HEADER_LENGTH = 9;
@@ -26,7 +25,9 @@ public class AlternatingBitPacket {
 	}
 	
 	public DatagramPacket getAck() {
-		return new DatagramPacket(new byte[]{(byte) getOneOrNull()}, 1, address, senderPort);
+		DatagramPacket currentPacket = new DatagramPacket(new byte[]{(byte) getOneOrNull()}, 1, address, senderPort);
+		counter ++;
+		return currentPacket;
 	}
 	
 	public DatagramPacket getNak(){
@@ -53,9 +54,6 @@ public class AlternatingBitPacket {
 		counter ++;
 		return packet;
 	}
-	
-//	public DatagramPacket prepareAfterReceived(byte[] buffer, int receiveLength){
-//	}
 	
 	public byte[] getPayload(DatagramPacket packet) {
 		byte[] payload = new byte[packet.getLength() - HEADER_LENGTH];
