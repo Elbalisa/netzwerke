@@ -51,16 +51,24 @@ public class FileReceiver implements Runnable {
 			System.err.println("ACK");
 
 			savePath += new String(payload);
-			boolean fileDeleted = new File(savePath).delete();
-			System.err.println((fileDeleted ? "" : "no ") + "file deleted");
+//			boolean fileDeleted = new File(savePath).delete();
+//			System.err.println((fileDeleted ? "" : "no ") + "file deleted");
 			fileOut = new FileOutputStream(savePath, true);
 
-			do {
+			receivePacket = new DatagramPacket(buffer, buffer.length);
+			daso.receive(receivePacket);
+			
+		while(receivePacket.getData()[0] != -1){
 
-				receivePacket = new DatagramPacket(buffer, buffer.length);
 				do{
-					daso.receive(receivePacket);
 					while(!checksumIsRight() || receivePacket.getData()[0] != packet.getOneOrNull()) {
+						if(receivePacket.getData()[0] == -1){
+							fileOut.flush();
+							fileOut.close();
+							daso.close();
+							System.out.println("StopTime:" + System.currentTimeMillis());
+							return;
+						}
 						System.err.println((!checksumIsRight() ? "wrong checksum" : "") + 
 						   (receivePacket.getData()[0] != packet.getOneOrNull() ? " wrong packet# " : "") + "NAK");
 						daso.send(packet.getNak());
@@ -69,10 +77,12 @@ public class FileReceiver implements Runnable {
 					System.err.println("ACK");
 					daso.send(packet.getAck());
 					fileOut.write(packet.getPayload(receivePacket));
+					
 				}while(checksumIsRight());
-
-			}while(receivePacket.getLength() >= 1390);
-
+				receivePacket = new DatagramPacket(buffer, buffer.length);
+				daso.receive(receivePacket);
+		}
+			
 			fileOut.flush();
 			fileOut.close();
 			daso.close();

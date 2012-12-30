@@ -68,6 +68,8 @@ public class FileSender implements Runnable {
 
 			currentPacket = packet.prepareToSend(fileName.getBytes());
 			sendWithTimeout(currentPacket);
+			
+			System.out.println("StartTime:" + System.currentTimeMillis());
 
 			bytesRead = fileInput.read(buffer, 0, buffer.length);
 			bytesTransmitted = bytesRead;
@@ -77,6 +79,10 @@ public class FileSender implements Runnable {
 				bytesTransmitted += bytesRead;
 				bytesRead = fileInput.read(buffer, 0, buffer.length);
 			}
+			buffer = new byte[1];
+			currentPacket = packet.prepareToSend(buffer);
+			currentPacket.getData()[0] = -1;
+			sendWithTimeout(currentPacket);
 			System.out.println(bytesTransmitted);
 			daso.close();
 			fileInput.close();
