@@ -6,26 +6,26 @@ public class PacketPuncher extends DatagramSocket{
 	
 	private int bitError;
 	private int loosePacket;
-	private int copyPacket;
-	private int counter;
+	private int duplicatePacket;
+	private int counter = 0;
 	
 	
-	public PacketPuncher(int bitError, int loosePackt, int copyPacket) throws IOException{
+	public PacketPuncher(int serverPort, int bitError, int loosePackt, int copyPacket) throws IOException{
+		super(serverPort);
 		this.bitError = bitError;
 		this.loosePacket = loosePackt;
-		this.copyPacket = copyPacket;
+		this.duplicatePacket = copyPacket;
 	}
 	
-	public void punch(DatagramPacket packet) throws IOException{
-		if((counter % bitError) == 0){
-			receive(packet);
-			packet.getData()[13] = (byte) 321;
-		}else if((counter % loosePacket) == 0){
-			receive(packet);
-		}else if((counter % copyPacket) == 0){
-			
-		}
+	public void send(DatagramPacket packet) throws IOException {
 		counter ++;
+		if((counter % bitError) == 0) {
+			packet.getData()[13] = (byte)(packet.getData()[13] ^ 10);
+		} else if((counter % loosePacket) == 0)  {
+			return;
+		} else if((counter % duplicatePacket) == 0){
+			super.send(packet);
+		}
+		super.send(packet);
 	}
-
 }

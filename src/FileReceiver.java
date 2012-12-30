@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -30,7 +31,7 @@ public class FileReceiver implements Runnable {
 	}
 
 	public void run(){
-		int bytesReceived = 0;
+//		int bytesReceived = 0;
 
 		try {
 			address = InetAddress.getByName(hostName);
@@ -40,9 +41,9 @@ public class FileReceiver implements Runnable {
 
 			receivePacket = new DatagramPacket(buffer, buffer.length);
 			daso.receive(receivePacket);
-			
+
 			while(!checksumIsRight()) {
-				System.err.println("NAK");
+				System.err.println("Wrong checksum in filename: NAK");
 				daso.send(packet.getNak());
 				daso.receive(receivePacket);
 			}
@@ -50,6 +51,8 @@ public class FileReceiver implements Runnable {
 			System.err.println("ACK");
 
 			savePath += new String(payload);
+			boolean fileDeleted = new File(savePath).delete();
+			System.err.println((fileDeleted ? "" : "no ") + "file deleted");
 			fileOut = new FileOutputStream(savePath, true);
 
 			do {
@@ -58,7 +61,8 @@ public class FileReceiver implements Runnable {
 				do{
 					daso.receive(receivePacket);
 					while(!checksumIsRight() || receivePacket.getData()[0] != packet.getOneOrNull()) {
-						System.err.println("NAK");
+						System.err.println((!checksumIsRight() ? "wrong checksum" : "") + 
+						   (receivePacket.getData()[0] != packet.getOneOrNull() ? " wrong packet# " : "") + "NAK");
 						daso.send(packet.getNak());
 						daso.receive(receivePacket);
 					}
