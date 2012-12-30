@@ -7,15 +7,13 @@ public class AlternatingBitPacket {
 	public static final int HEADER_LENGTH = 9;
 	public static final int MAX_PAYLOAD = 1400 - HEADER_LENGTH;
 
-	public int counter;
-	public int OneOrNull;
-	public long checksum;
+	private int counter = 0;
+	private long checksum;
 	private CRC32 checksumCalculator = new CRC32();
 	private DatagramPacket packet;
-	public int senderPort;
-	public int receiverPort;
+	private int senderPort;
+	private int receiverPort;
 	private InetAddress address;
-	private int totalBytesInBuffer;
 	private byte[] buffer;
 	
 	public AlternatingBitPacket(InetAddress address, int senderPort, int receiverPort){
@@ -31,7 +29,7 @@ public class AlternatingBitPacket {
 	}
 	
 	public DatagramPacket getNak(){
-		return new DatagramPacket(new byte[]{(byte) ((getOneOrNull() ^ 1) & 0x1)}, 1, address, senderPort);
+		return new DatagramPacket(new byte[]{ (byte) ((getOneOrNull() ^ 1) & 0x1)}, 1, address, senderPort);
 	}
 	
 	public long getChecksum(byte[] payload){
