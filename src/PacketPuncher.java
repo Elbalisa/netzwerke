@@ -19,11 +19,11 @@ public class PacketPuncher extends DatagramSocket{
 	
 	public void send(DatagramPacket packet) throws IOException {
 		counter ++;
-		if((counter % bitError) == 0) {
+		if((counter % bitError == 0 && packet.getData().length > 13) ) {
 			packet.getData()[13] = (byte)(packet.getData()[13] ^ 10);
 		} else if((counter % loosePacket) == 0)  {
 			return;
-		} else if((counter % duplicatePacket) == 0){
+		}  if((counter % duplicatePacket) == 0){
 			super.send(packet);
 		}
 		super.send(packet);

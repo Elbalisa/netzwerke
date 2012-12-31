@@ -81,8 +81,9 @@ public class FileSender implements Runnable {
 			}
 			buffer = new byte[1];
 			currentPacket = packet.prepareToSend(buffer);
-			currentPacket.getData()[0] = -1;
+			currentPacket.getData()[0] = (byte)-1;
 			sendWithTimeout(currentPacket);
+			System.out.println("StopTime:" + System.currentTimeMillis());
 			System.out.println(bytesTransmitted);
 			daso.close();
 			fileInput.close();
@@ -109,4 +110,3 @@ public class FileSender implements Runnable {
 		}while(currentPacket.getData()[0] != answer.getData()[0] || timeout);
 	}
 }
-

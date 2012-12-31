@@ -51,8 +51,8 @@ public class FileReceiver implements Runnable {
 			System.err.println("ACK");
 
 			savePath += new String(payload);
-//			boolean fileDeleted = new File(savePath).delete();
-//			System.err.println((fileDeleted ? "" : "no ") + "file deleted");
+			boolean fileDeleted = new File(savePath).delete();
+			System.err.println((fileDeleted ? "" : "no ") + "file deleted");
 			fileOut = new FileOutputStream(savePath, true);
 
 			receivePacket = new DatagramPacket(buffer, buffer.length);
@@ -63,10 +63,11 @@ public class FileReceiver implements Runnable {
 				do{
 					while(!checksumIsRight() || receivePacket.getData()[0] != packet.getOneOrNull()) {
 						if(receivePacket.getData()[0] == -1){
+							byte[] b = new byte[] {(byte)-1};
+							daso.send(new DatagramPacket(b, 1, address, senderPort));
 							fileOut.flush();
 							fileOut.close();
 							daso.close();
-							System.out.println("StopTime:" + System.currentTimeMillis());
 							return;
 						}
 						System.err.println((!checksumIsRight() ? "wrong checksum" : "") + 
@@ -82,7 +83,8 @@ public class FileReceiver implements Runnable {
 				receivePacket = new DatagramPacket(buffer, buffer.length);
 				daso.receive(receivePacket);
 		}
-			
+		byte[] b = new byte[] {(byte)-1};
+		daso.send(new DatagramPacket(b, 1, address, senderPort));
 			fileOut.flush();
 			fileOut.close();
 			daso.close();

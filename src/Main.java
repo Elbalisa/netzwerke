@@ -6,9 +6,9 @@ public static void main(String[] args){
 	final int receiverPort = 8003;
 
 		FileReceiver fileR = new FileReceiver("/Users/Izzy/Desktop/", "localhost", senderPort, receiverPort);
-		FileSender fileS = new FileSender(senderPort, receiverPort, "/Users/Izzy/Pictures/takeAWookiee.jpg", "takeAWookiee.jpg");
-//		FileSender fileS = new FileSender(senderPort, receiverPort, "/Users/Izzy/Pictures/takeAWookiee.jpg", "takeAWookiee.png", 
-//				5, 6, 10);
+//		FileSender fileS = new FileSender(senderPort, receiverPort, "/Users/Izzy/Pictures/takeAWookiee.jpg", "takeAWookiee.jpg");
+		FileSender fileS = new FileSender(senderPort, receiverPort, "/Users/Izzy/Pictures/takeAWookiee.jpg", "takeAWookiee.jpg", 
+				10, 5, 5);
 
 		new Thread (fileR).start();
 		new Thread(fileS).start();
