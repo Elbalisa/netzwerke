@@ -1,0 +1,20 @@
+@CHARSET "UTF-8";
+
+body {
+	margin: 0px;
+	padding: 0px;
+}
+
+#header {
+	width: 100%;
+	higth: 200px;
+	backround-couler: #00FFFF;
+	
+}
+
+#body {
+	width: 300%;
+	higth: 1000px;
+	backround-couler: #20B2AA;
+	
+}
